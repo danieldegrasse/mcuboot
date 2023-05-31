@@ -434,6 +434,16 @@ config BOOT_USB_DFU_GPIO
 	help
 	  If y, MCUboot uses GPIO to detect whether to invoke USB DFU.
 
+config BOOT_USB_DFU_KEY
+	bool "Use keyboard keypress to detect whether to trigger DFU mode"
+	select USB_DEVICE_STACK
+	select USB_DFU_CLASS
+	select IMG_MANAGER
+	select STREAM_FLASH
+	select MULTITHREADING
+	help
+	  If y, MCUboot uses a keypress to detect whether to invoke USB DFU.
+
 endchoice
 
 config BOOT_USB_DFU_WAIT_DELAY_MS
@@ -443,7 +453,7 @@ config BOOT_USB_DFU_WAIT_DELAY_MS
 	help
 	  Milliseconds to wait for USB DFU to be invoked.
 
-if BOOT_USB_DFU_GPIO
+if BOOT_USB_DFU_GPIO || BOOT_USB_DFU_KEY
 
 config BOOT_USB_DFU_DETECT_PORT
 	string "GPIO device to trigger USB DFU mode (DEPRECATED)"

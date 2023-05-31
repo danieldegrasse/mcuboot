@@ -52,7 +52,9 @@ const struct boot_uart_funcs boot_funcs = {
 };
 #endif
 
-#if defined(CONFIG_BOOT_USB_DFU_WAIT) || defined(CONFIG_BOOT_USB_DFU_GPIO)
+#if defined(CONFIG_BOOT_USB_DFU_WAIT) || \
+	defined(CONFIG_BOOT_USB_DFU_GPIO) || \
+	defined(CONFIG_BOOT_USB_DFU_KEY)
 #include <zephyr/usb/class/usb_dfu.h>
 #endif
 
@@ -385,7 +387,9 @@ void zephyr_boot_log_stop(void)
         * !defined(CONFIG_LOG_PROCESS_THREAD) && !defined(ZEPHYR_LOG_MODE_MINIMAL)
         */
 
-#if defined(CONFIG_MCUBOOT_SERIAL) || defined(CONFIG_BOOT_USB_DFU_GPIO)
+#if defined(CONFIG_MCUBOOT_SERIAL) || \
+	defined(CONFIG_BOOT_USB_DFU_GPIO) || \
+	defined(CONFIG_BOOT_USB_DFU_KEY)
 
 #ifdef CONFIG_MCUBOOT_SERIAL
 #define BUTTON_0_DETECT_DELAY CONFIG_BOOT_SERIAL_DETECT_DELAY
@@ -399,6 +403,12 @@ void zephyr_boot_log_stop(void)
 #if DT_NODE_EXISTS(BUTTON_0_NODE) && DT_NODE_HAS_PROP(BUTTON_0_NODE, gpios)
 
 static const struct gpio_dt_spec button0 = GPIO_DT_SPEC_GET(BUTTON_0_NODE, gpios);
+
+#if defined(CONFIG_BOOT_USB_DFU_KEY)
+
+static const struct gpio_dt_spec button1 = GPIO_DT_SPEC_GET_BY_IDX(BUTTON_0_NODE, gpios, 1);
+
+#endif
 
 #else /* fallback to legacy configuration */
 
@@ -452,10 +462,21 @@ static bool detect_pin(void)
         __ASSERT(false, "GPIO device is not ready.\n");
         return false;
     }
+
+#ifdef CONFIG_BOOT_USB_DFU_KEY
+    if (!device_is_ready(button1.port)) {
+       __ASSERT(false, "GPIO button 1 is not ready.\n");
+       return false;
+    }
+#endif
 #endif
 
     rc = gpio_pin_configure_dt(&button0, GPIO_INPUT);
     __ASSERT(rc == 0, "Failed to initialize boot detect pin.\n");
+#ifdef CONFIG_BOOT_USB_DFU_KEY
+    rc = gpio_pin_configure_dt(&button1, GPIO_OUTPUT_ACTIVE);
+    __ASSERT(rc == 0, "Failed to initialize boot detect pin 1.\n");
+#endif
 
     rc = gpio_pin_get_dt(&button0);
     pin_active = rc;
@@ -544,7 +565,7 @@ void main(void)
     }
 #endif
 
-#if defined(CONFIG_BOOT_USB_DFU_GPIO)
+#if defined(CONFIG_BOOT_USB_DFU_GPIO) || defined(CONFIG_BOOT_USB_DFU_KEY)
     if (detect_pin()) {
 #ifdef CONFIG_MCUBOOT_INDICATION_LED
         gpio_pin_set_dt(&led0, 1);
